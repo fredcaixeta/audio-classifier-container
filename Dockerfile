@@ -13,7 +13,10 @@ COPY pyproject.toml .
 
 # Instala o uv e depois sincroniza as dependências do projeto
 RUN pip install uv
-RUN uv sync
+RUN uv sync --no-deps
+
+# Instala o torch e o torchaudio usando a versão de CPU
+RUN pip install torch==2.3.0+cpu torchaudio==2.3.0+cpu --extra-index-url https://download.pytorch.org/whl/cpu
 
 # Copia o resto da aplicação, incluindo o app.py e os modelos
 COPY . .
