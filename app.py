@@ -21,7 +21,18 @@ DOWNLOAD_TEMP_DIR = 'download_temp'
 app = Flask(__name__)
 CORS(app)
 
-# --- 3. FUNÇÃO AUXILIAR PARA EXTRAIR EMBEDDINGS (COMPLETOS) ---
+# --- 3. CARREGA MODELO E SCALER NA INICIALIZAÇÃO ---
+try:
+    print("Carregando modelo e scaler...")
+    modelo = joblib.load(NOME_ARQUIVO_MODELO)
+    scaler = joblib.load(NOME_ARQUIVO_SCALER)
+    print("Modelo e scaler carregados com sucesso.")
+except Exception as e:
+    print(f"Erro crítico ao carregar modelo ou scaler: {e}")
+    modelo = None
+    scaler = None
+
+# --- 4. FUNÇÃO AUXILIAR PARA EXTRAIR EMBEDDINGS (COMPLETOS) ---
 def criar_embedding_mfcc(caminho_do_audio):
     """
     Carrega um arquivo de áudio e cria um embedding com 40 MFCCs.
@@ -47,7 +58,7 @@ def criar_embedding_mfcc(caminho_do_audio):
         print(f"Erro ao criar embedding para {caminho_do_audio}: {e}")
         return None
 
-# --- 4. FUNÇÃO PARA SEPARAR VOCAIS ---
+# --- 5. FUNÇÃO PARA SEPARAR VOCAIS ---
 def separar_vocal_demucs(caminho_audio_entrada, output_dir):
     """Usa Demucs para separar o vocal de um arquivo de áudio."""
     try:
@@ -60,7 +71,6 @@ def separar_vocal_demucs(caminho_audio_entrada, output_dir):
         subprocess.run(comando, check=True, capture_output=True, text=True)
         
         nome_base = os.path.splitext(os.path.basename(caminho_audio_entrada))[0]
-        # Demucs cria uma estrutura de pastas como output_dir/htdemucs/nome_base/
         demucs_path = os.path.join(output_dir, 'htdemucs', nome_base)
         
         caminho_vocal = os.path.join(demucs_path, 'vocals.wav')
@@ -78,14 +88,13 @@ def separar_vocal_demucs(caminho_audio_entrada, output_dir):
         print(f"Erro inesperado durante a separação do vocal: {e}")
         return None
 
-# --- 5. ROTA DE CLASSIFICAÇÃO ---
+# --- 6. ROTA DE CLASSIFICAÇÃO ---
 @app.route('/api/classify', methods=['POST'])
 def classify_audio():
+    if modelo is None or scaler is None:
+        return jsonify({'error': 'Servidor não está pronto, modelo não carregado.'}), 503
+
     try:
-        # Carrega o modelo e o scaler
-        modelo = joblib.load(NOME_ARQUIVO_MODELO)
-        scaler = joblib.load(NOME_ARQUIVO_SCALER)
-        
         # Obtém a URL do corpo da requisição
         data = request.get_json()
         url = data.get('url')
@@ -95,11 +104,13 @@ def classify_audio():
         # Cria diretórios temporários
         os.makedirs(DOWNLOAD_TEMP_DIR, exist_ok=True)
         
-        # 5.1. Baixa o áudio da URL usando uma configuração mais robusta
+        # ... (restante do código da rota, que não mudou) ...
+        # (código para baixar o áudio, separar o vocal, etc.)
+        # ...
+
+        # 6.1. Baixa o áudio da URL usando uma configuração mais robusta
         print(f"Baixando áudio da URL: {url}...")
         try:
-            # Opções do yt-dlp para um download mais confiável
-            # O 'outtmpl' agora usa o 'id' do vídeo para evitar problemas com nomes longos
             ydl_opts = {
                 'format': 'bestaudio/best',
                 'outtmpl': os.path.join(DOWNLOAD_TEMP_DIR, '%(id)s.%(ext)s'),
@@ -111,7 +122,6 @@ def classify_audio():
             }
             with YoutubeDL(ydl_opts) as ydl:
                 info_dict = ydl.extract_info(url, download=True)
-                # O yt-dlp retorna o ID do vídeo, que é usado para encontrar o arquivo
                 video_id = info_dict.get('id', 'video') 
                 caminho_audio_original = os.path.join(DOWNLOAD_TEMP_DIR, f"{video_id}.wav")
                 
@@ -121,13 +131,13 @@ def classify_audio():
         except Exception as e:
             return jsonify({'error': f'Erro ao baixar o áudio: {e}'}), 500
         
-        # 5.2. Separa o vocal
+        # 6.2. Separa o vocal
         caminho_vocal_separado = separar_vocal_demucs(caminho_audio_original, DEMUCS_TEMP_DIR)
         
         if not caminho_vocal_separado:
             return jsonify({'error': 'Erro ao separar o vocal do áudio.'}), 500
 
-        # 5.3. Cria os embeddings e faz a inferência
+        # 6.3. Cria os embeddings e faz a inferência
         embedding_original = criar_embedding_mfcc(caminho_audio_original)
         embedding_demucs = criar_embedding_mfcc(caminho_vocal_separado)
         
@@ -147,13 +157,11 @@ def classify_audio():
         label_predito = 'IA' if predicao[0] == 1 else 'REAL'
         probabilidade_predita = probabilidade[0][1] if predicao[0] == 1 else probabilidade[0][0]
 
-        print(f"label {label_predito}")
-        print(f"prob {str(probabilidade_predita)}")
-        # 5.4. Limpa os arquivos temporários
+        # 6.4. Limpa os arquivos temporários
         shutil.rmtree(DEMUCS_TEMP_DIR)
         shutil.rmtree(DOWNLOAD_TEMP_DIR)
         
-        # 5.5. Retorna o resultado
+        # 6.5. Retorna o resultado
         return jsonify({
             'label': label_predito,
             'probability': probabilidade_predita
@@ -162,8 +170,4 @@ def classify_audio():
     except Exception as e:
         print(f"Erro geral no servidor: {e}")
         return jsonify({'error': 'Erro interno do servidor.'}), 500
-
-# --- 6. EXECUÇÃO DO FLASK ---
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
 
