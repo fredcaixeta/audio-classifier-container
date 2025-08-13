@@ -1,0 +1,23 @@
+[project]
+name = "ai-detect-app"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "demucs>=4.0.1",
+    "ffmpeg-python>=0.2.0",
+    "flask>=3.1.1",
+    "flask-cors>=6.0.1",
+    "matplotlib>=3.9.4",
+    "numba>=0.60.0",
+    "pandas>=2.3.1",
+    "plotly>=6.2.0",
+    "requests>=2.32.4",
+    "scikit-learn>=1.6.1",
+    "soundfile>=0.13.1",
+    "torch>=2.8.0",
+    "torchaudio>=2.8.0",
+    "umap-learn>=0.5.9.post2",
+    "yt-dlp>=2025.8.11",
+]
