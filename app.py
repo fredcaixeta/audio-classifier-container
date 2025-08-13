@@ -177,3 +177,7 @@ def classify_audio():
     except Exception as e:
         print(f"Erro geral no servidor: {e}")
         return jsonify({'error': 'Erro interno do servidor.'}), 500
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 8000))
+    app.run(host='0.0.0.0', port=port)
