@@ -19,5 +19,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copia o resto da aplicação, incluindo o app.py e os modelos
 COPY . .
 
-# Comando para iniciar a aplicação com o Gunicorn, usando a variável de ambiente PORT
-CMD gunicorn -w 1 --bind 0.0.0.0:$PORT app:app
+# Comando para iniciar a aplicação com o Gunicorn, usando a porta 7860
+CMD gunicorn -w 1 --bind 0.0.0.0:7860 app:app
