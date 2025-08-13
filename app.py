@@ -21,6 +21,8 @@ DOWNLOAD_TEMP_DIR = 'download_temp'
 app = Flask(__name__)
 CORS(app)
 
+print("Iniciando a aplicação Flask...")
+
 # --- 3. CARREGA MODELO E SCALER NA INICIALIZAÇÃO ---
 try:
     print("Carregando modelo e scaler...")
@@ -89,6 +91,11 @@ def separar_vocal_demucs(caminho_audio_entrada, output_dir):
         return None
 
 # --- 6. ROTA DE CLASSIFICAÇÃO ---
+@app.route('/')
+def home():
+    """Rota de saúde para verificar se a API está no ar."""
+    return 'Hello from the audio classifier backend!'
+
 @app.route('/api/classify', methods=['POST'])
 def classify_audio():
     if modelo is None or scaler is None:
@@ -170,4 +177,3 @@ def classify_audio():
     except Exception as e:
         print(f"Erro geral no servidor: {e}")
         return jsonify({'error': 'Erro interno do servidor.'}), 500
-
